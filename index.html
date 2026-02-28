@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RESTART // TACTICAL SIMULATION</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root { --c: #00e5ff; --d: #004455; --b: #000; --p: rgba(0, 15, 30, 0.9); --br: rgba(0, 229, 255, 0.4); }
+  * { box-sizing: border-box; scroll-behavior: smooth; }
+  body { background: var(--b); color: var(--c); font-family: 'Share Tech Mono', monospace; margin: 0; overflow-x: hidden; font-size: 11px; line-height: 1.4; }
+  
+  body::before { content: ""; position: fixed; inset: 0; background-image: linear-gradient(var(--d) 1px, transparent 1px), linear-gradient(90deg, var(--d) 1px, transparent 1px); background-size: 30px 30px; opacity: 0.1; z-index: -1; }
+  
+  /* LOADING SCREEN */
+  #ls { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: transform .8s cubic-bezier(.8,0,.2,1); }
+  .lb { width: 280px; text-align: center; border: 1px solid var(--br); padding: 30px; background: rgba(0,10,20,0.95); }
+  .bc { width: 100%; height: 2px; background: rgba(0, 229, 255, 0.1); margin: 25px 0; display: none; }
+  #pb { width: 0%; height: 100%; background: var(--c); box-shadow: 0 0 10px var(--c); transition: width .1s; }
+  #sb { background: transparent; color: var(--c); border: 1px solid var(--c); padding: 10px 25px; cursor: pointer; font-family: Orbitron; font-weight: 700; font-size: 10px; letter-spacing: 3px; }
+
+  /* NAVIGATION */
+  nav { position: fixed; top: 0; width: 100%; height: 50px; background: rgba(0, 5, 10, 1); border-bottom: 1px solid var(--br); z-index: 900; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; }
+  .logo { font-family: Orbitron; font-weight: 900; letter-spacing: 1px; font-size: 0.9rem; color: #fff; text-decoration: none; flex-shrink: 0; }
+  .tn { display: flex; overflow-x: auto; gap: 5px; flex-grow: 1; margin: 0 10px; scrollbar-width: none; }
+  .tn::-webkit-scrollbar { display: none; }
+  .ti { color: var(--c); text-decoration: none; font-family: Orbitron; font-size: 7px; padding: 6px 10px; border: 1px solid var(--br); background: rgba(0,229,255,0.05); flex-shrink: 0; text-align: center; }
+  #ac { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--c); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 10px; flex-shrink: 0; }
+
+  /* HEADER */
+  header { 
+    height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; 
+    position: relative; overflow: hidden;
+    background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://raw.githubusercontent.com/i-h1/sf_s/main/earth.PNG'); 
+    background-size: cover; background-position: center;
+  }
+  h1 { font-family: Orbitron; font-size: 5rem; margin: 0; font-weight: 900; color: #fff; text-shadow: 0 0 20px var(--c); letter-spacing: 15px; }
+
+  /* SECTIONS */
+  .sec { max-width: 800px; margin: 15px auto; padding: 30px; background: var(--p); border: 1px solid var(--br); }
+  h2 { font-family: Orbitron; font-size: 1.1rem; letter-spacing: 4px; border-left: 3px solid var(--c); padding-left: 10px; margin-bottom: 20px; color: #fff; }
+
+  /* PERSONNEL CARD & STATUS BARS */
+  .mc { border: 1px solid var(--br); padding: 15px; cursor: pointer; background: rgba(0,229,255,0.05); margin-bottom: 8px; }
+  .el-profile { display: flex; gap: 15px; align-items: flex-start; }
+  .el-img { width: 100px; height: auto; border: 1px solid var(--br); background: #000; flex-shrink: 0; }
+  
+  .cc { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,229,255,0.2); }
+  .mc.active .cc { display: block; }
+
+  /* Animated Status Bars */
+  .status-container { margin-top: 15px; }
+  .status-row { margin-bottom: 8px; }
+  .status-label { font-size: 8px; font-family: Orbitron; display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .bar-bg { width: 100%; height: 4px; background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.2); }
+  .bar-fill { width: 0%; height: 100%; background: var(--c); box-shadow: 0 0 5px var(--c); transition: width 1.2s cubic-bezier(0.1, 0.8, 0.2, 1); }
+  .mc.active .bar-fill.sync { width: 99.9%; }
+  .mc.active .bar-fill.trust { width: 85%; }
+  .mc.active .bar-fill.stability { width: 92%; }
+
+  .gc { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .le { border-left: 1px solid var(--c); padding: 10px 15px; margin-bottom: 10px; background: rgba(255,255,255,0.03); font-size: 9px; }
+  
+  footer { text-align: center; padding: 60px 0; font-size: 7px; opacity: .4; letter-spacing: 4px; font-family: Orbitron; }
+  @media (max-width: 600px) { h1 { font-size: 2.8rem; letter-spacing: 5px; } .gc { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body id="top">
+<audio id="bgm" loop><source src="https://raw.githubusercontent.com/i-h1/sf_b/main/sf.mp3" type="audio/mpeg"></audio>
+
+<div id="ls">
+  <div class="lb">
+    <div id="lm" style="font-family:Orbitron;font-size:7px;letter-spacing:3px;">RESTART_OS_INIT...</div>
+    <div id="bc" class="bc"><div id="pb"></div></div>
+    <div id="lp" style="margin-top:10px;display:none;font-size:10px;">0%</div>
+    <button id="sb">BOOT SYSTEM</button>
+  </div>
+</div>
+
+<nav>
+  <a href="#top" class="logo">RESTART</a>
+  <div class="tn">
+    <a href="#syn" class="ti">PH_01 SYNOPSIS</a>
+    <a href="#per" class="ti">PH_02 PERSONNEL</a>
+    <a href="#ars" class="ti">PH_03 ARSENAL</a>
+    <a href="#log" class="ti">PH_04 LOGS</a>
+  </div>
+  <div id="ac">▷</div>
+</nav>
+
+<header>
+  <div style="font-family:Orbitron;font-size:8px;letter-spacing:10px;opacity:.8;margin-bottom:10px;">AVALON STRATEGIC SIMULATION</div>
+  <h1>RESTART</h1>
+</header>
+
+<div class="sec" id="syn">
+  <h2>SYNOPSIS</h2>
+  <p>宇宙暦2245年。航宙船「アバロン」。簒奪者に汚染された閉鎖環境。支援AI「エル」と共に目覚める最後のRESTARTの物語。</p>
+</div>
+
+<div class="sec" id="per">
+  <h2>PERSONNEL</h2>
+  <div class="mc" onclick="this.classList.toggle('active')">
+    <div class="el-profile">
+      <img src="https://raw.githubusercontent.com/i-h1/sf_s/refs/heads/main/1.PNG" alt="EL" class="el-img">
+      <div style="flex-grow:1;">
+        <h3 style="margin:0;font-family:Orbitron;font-size:0.9rem;">UNIT: EL</h3>
+        <span style="font-size:7px;border:1px solid var(--c);padding:1px 4px;display:inline-block;margin-top:5px;">RANK_S / SUPPORT_AI</span>
+        <p style="font-size:9px; margin-top:10px; opacity:0.8;">TAP TO RECOVER BIOMETRICS</p>
+      </div>
+    </div>
+    
+    <div class="cc">
+      <p style="margin-bottom:15px;">白髪碧眼の支援人格。演算精度99.99%。マスターの生存を最優先。「同期完了。私だけに身を委ねてください」</p>
+      
+      <div class="status-container">
+        <div class="status-row">
+          <div class="status-label"><span>SYNC_RATE</span><span>99.9%</span></div>
+          <div class="bar-bg"><div class="bar-fill sync"></div></div>
+        </div>
+        <div class="status-row">
+          <div class="status-label"><span>TRUST_LEVEL</span><span>85%</span></div>
+          <div class="bar-bg"><div class="bar-fill trust"></div></div>
+        </div>
+        <div class="status-row">
+          <div class="status-label"><span>STABILITY</span><span>92%</span></div>
+          <div class="bar-bg"><div class="bar-fill stability"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sec" id="ars">
+  <h2>ARSENAL</h2>
+  <div class="gc">
+    <div class="mc" onclick="this.classList.toggle('active')"><h4 style="margin:0;font-family:Orbitron;font-size:0.8rem;">MANA_PISTOL</h4><div class="cc">魔導銃器。エルの自動照準補正と連動。</div></div>
+    <div class="mc" onclick="this.classList.toggle('active')"><h4 style="margin:0;font-family:Orbitron;font-size:0.8rem;">NEURAL_HUD</h4><div class="cc">網膜投影型。情報の検閲装置。</div></div>
+  </div>
+</div>
+
+<div class="sec" id="log">
+  <h2>SIMULATION_LOGS</h2>
+  <div class="le"><b>2245.08.12</b> LOG#142：シミュレーション失敗。再構築。</div>
+  <div class="le"><b>2245.08.15</b> LOG#143：シミュレーション失敗。強制リセット。</div>
+  <div class="le" style="border-color:#fff;opacity:.8;"><b>CURRENT</b> #144：実行中。貴方はまだ、人間ですか？</div>
+</div>
+
+<footer>AVALON_SYSTEMS // RESTART_PROJECT &copy; 2245</footer>
+
+<script>
+  const g=id=>document.getElementById(id), bgm=g('bgm'), sb=g('sb'), ls=g('ls'), ac=g('ac'), pb=g('pb'), lp=g('lp');
+
+  sb.onclick=()=>{
+    bgm.play().catch(e=>0); sb.style.display="none"; g('bc').style.display="block"; lp.style.display="block"; g('lm').innerText="BOOTING...";
+    let p=0; const iv=setInterval(()=>{
+      p += Math.floor(Math.random()*6)+2;
+      if(p>=100){
+        p=100; clearInterval(iv); g('lm').innerText="READY";
+        setTimeout(()=>{ ls.style.transform="translateX(-100%)"; ac.innerHTML="||"; setTimeout(()=>ls.style.display="none",1000); },400);
+      }
+      pb.style.width=p+"%"; lp.innerText=p+"%";
+    },60);
+  };
+
+  ac.onclick = () => {
+    if (bgm.paused) { bgm.play(); ac.innerHTML = "||"; }
+    else { bgm.pause(); ac.innerHTML = "▷"; }
+  };
+</script>
+</body>
+</html>
